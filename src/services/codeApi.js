@@ -1,7 +1,9 @@
-// Centralized API access. No other file in the app should call fetch()
-// directly against the backend — everything goes through here.
+// Centralized API access.
+// No other file in the app should call fetch() directly against
+// the backend — everything goes through here.
 
-export const API_BASE_URL = "http://localhost:8080";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 /**
  * Thrown whenever the backend responds with a non-2xx status.
@@ -19,27 +21,45 @@ export class ApiError extends Error {
 async function parseErrorMessage(response, fallback) {
   try {
     const body = await response.json();
-    if (body && typeof body.message === "string" && body.message.trim()) {
+
+    if (
+      body &&
+      typeof body.message === "string" &&
+      body.message.trim()
+    ) {
       return body.message;
     }
   } catch {
     // Response body wasn't JSON (or was empty) — fall through to fallback.
   }
+
   return fallback;
 }
 
 /**
  * Creates a new temporary code snippet.
- * @param {{ content: string, language: string, expirationMinutes: number }} data
- * @returns {Promise<{ accessCode: string, content: string, language: string, createdAt: string, expiresAt: string }>}
+ *
+ * @param {{
+ *   content: string,
+ *   language: string,
+ *   expirationMinutes: number
+ * }} data
+ *
+ * @returns {Promise<{
+ *   accessCode: string,
+ *   content: string,
+ *   language: string,
+ *   createdAt: string,
+ *   expiresAt: string
+ * }>}
  */
 export async function createCode(data) {
   const response = await fetch(`${API_BASE_URL}/api/codes`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
 
   if (!response.ok) {
@@ -47,6 +67,7 @@ export async function createCode(data) {
       response,
       "Something went wrong while sharing your code. Please try again."
     );
+
     throw new ApiError(response.status, message);
   }
 
@@ -55,8 +76,15 @@ export async function createCode(data) {
 
 /**
  * Retrieves a shared code snippet by its access code.
+ *
  * @param {string} accessCode
- * @returns {Promise<{ content: string, language: string, createdAt: string, expiresAt: string }>}
+ *
+ * @returns {Promise<{
+ *   content: string,
+ *   language: string,
+ *   createdAt: string,
+ *   expiresAt: string
+ * }>}
  */
 export async function getCode(accessCode) {
   const response = await fetch(
@@ -68,10 +96,11 @@ export async function getCode(accessCode) {
       response.status === 404
         ? "The code you're looking for doesn't exist."
         : response.status === 410
-        ? "This shared code is no longer available."
-        : "Something went wrong while loading this code. Please try again.";
+          ? "This shared code is no longer available."
+          : "Something went wrong while loading this code. Please try again.";
 
     const message = await parseErrorMessage(response, fallback);
+
     throw new ApiError(response.status, message);
   }
 
